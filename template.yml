@@ -1,0 +1,242 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  #lambda + s3 params
+  BucketNameLeituras:
+    Description: Nome do bucket de leituras
+    Type: String
+    Default: leituras
+  BucketNameLeiturasIncorretas:
+    Description: Nome do bucket para enviar arquivos com erros
+    Type: String
+    Default: leituras-incorretas
+  BucketNameLeiturasCorretas:
+    Description: Nome do bucket para enviar arquivos SEM erros
+    Type: String
+    Default: leituras-corretas
+  Region:
+    Description: Region
+    Type: String
+    Default: us-east-1
+
+Resources:
+
+  #Simulador
+  SimuladorSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: blogpost-legacy-app-sg
+      GroupDescription: "Security group for SSH and HTTP connections"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+  
+  SimuladorInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config: 
+          files:
+            /home/ec2-user/main:
+              owner: ec2-user
+              group: ec2-user
+              source: https://d2ftn0z9x890rg.cloudfront.net/main
+          commands:
+            01-permission:
+              command: !Sub | 
+                chmod +x /home/ec2-user/main
+              cwd: /home/ec2-user
+            02-run:
+              command: !Sub | 
+                nohup /home/ec2-user/main &
+              cwd: /home/ec2-user
+    Properties:
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
+            Encrypted: true
+            DeleteOnTermination: true
+      ImageId: ami-0447addf6c74624eb #AL2 on Graviton2
+      InstanceType: t4g.nano
+      Monitoring: false
+      SecurityGroupIds:
+        - !Ref SimuladorSecurityGroup
+      UserData: 
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -xe
+            # Update aws-cfn-bootstrap to the latest
+            yum install -y aws-cfn-bootstrap
+            # Call cfn-init script to install files and packages
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource SimuladorInstance --region ${AWS::Region}  
+  SimuladorEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref SimuladorInstance
+
+
+  # Main resources - buckets and lambdas - inicio
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+  
+  BucketLeituras:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketNameLeituras
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !GetAtt TriggerLambdaFunction.Arn
+  
+  BucketLeiturasCorretas:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketNameLeiturasCorretas
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+  
+  BucketLeiturasIncorretas:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketNameLeiturasIncorretas
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+
+  TriggerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+      MemorySize: 256
+      Timeout: 15
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          INTEGRACAO_IP: !Ref SimuladorEIP
+          INTEGRACAO_PORTA: 8080
+          BUCKET_LEITURAS: !Ref BucketNameLeituras
+          BUCKET_LEITURAS_CORRETAS: !Ref BucketNameLeiturasCorretas
+          BUCKET_LEITURAS_INCORRETAS: !Ref BucketNameLeiturasIncorretas
+      TracingConfig:
+        Mode: Active
+      Handler: index.lambda_handler
+      Code: 
+        ZipFile: |
+          import json
+          import boto3
+          import xml.etree.ElementTree as ET
+          import time
+          import os
+          import urllib3
+
+          def lambda_handler(event, context):
+
+              _integracao_ip = os.environ.get('INTEGRACAO_IP', '0.0.0.0') #IP do simulador
+              _integracao_porta = os.environ.get('INTEGRACAO_PORTA', 8080) #Porta do simulador
+              _service_url = 'http://{ip}:{porta}/poc/leitura'.format(ip=_integracao_ip, porta=_integracao_porta) #servico de mock q valida os arquivos
+              _bucket_leitura = os.environ.get('BUCKET_LEITURAS', 'leituras') #bucket de origem
+              _bucket_leitura_correta = os.environ.get('BUCKET_LEITURAS_CORRETAS', 'leituras-corretas') #bucket onde vao os arquivos processados com sucesso
+              _bucket_leitura_incorreta = os.environ.get('BUCKET_LEITURAS_INCORRETAS', 'leituras-incorretas') #nome do bucket onde vao os arquivos com erro
+              _codigo_retorno_ok = 0 #codigo de retorno ok
+
+              #extraindo dados do bucket/arquivo que trigaram a funcao
+              bucket_name = event['Records'][0]['s3']['bucket']['name']
+              key_name = event['Records'][0]['s3']['object']['key']
+
+              #apenas um debug
+              print("Input", event)
+              print("Bucket:", bucket_name)
+              print("Object:", key_name)
+
+              s3 = boto3.resource('s3')
+
+              #extrai o conteudo do arquivo enviado para uma string
+              xmlContent = s3.Object(bucket_name, key_name).get()['Body'].read()
+
+              #define os headers que serao enviados para o servidor de validacao/mock
+              headers = {'Content-Type': 'application/xml'}
+
+              #faz o request para o servidor de validacao e captura o retorno
+              http = urllib3.PoolManager()
+              r = http.request('POST', _service_url,
+                          headers=headers,
+                          body=xmlContent)
+              xmlRetorno = r.data.decode('utf-8')
+
+              #o codigo de retorno fica no meio do arquivo xml(xMotivo)
+              # então aqui fazemos o parse do xml e extraimos o campo desejado 
+              codigoRetorno = int(ET.fromstring(xmlRetorno).findall('.//codMotivo')[0].text)
+              print("Codigo retorno: ", codigoRetorno)
+
+              #move o arquivo para o bucket de acordo com o codigo de retorno
+              if codigoRetorno == _codigo_retorno_ok:
+                  move_file(key_name, _bucket_leitura, _bucket_leitura_correta)
+              else:
+                  move_file(key_name, _bucket_leitura, _bucket_leitura_incorreta)
+
+              return {
+                  # "statusCode": 200 if codigoRetorno == 103 else 400,
+                  "body": json.dumps({
+                      "message": xmlRetorno
+                  }),
+              }
+
+          #move o arquivo para o bucket de destino, e exclui o mesmo do bucket de origem
+          def move_file(key, source_bucket, destination_bucket):
+              s3 = boto3.resource('s3')
+              copy_source = {
+                  'Bucket': source_bucket,
+                  'Key': key
+              }
+              #gera um arquivo com o nome timestamp-nome para ser enviado
+              destination_key = '{ts}-{key}'.format(ts = time.strftime("%Y%m%d%H%M%S"), key=key)
+              #copia o arquivo pro bucket de destino
+              s3.meta.client.copy(copy_source, destination_bucket, destination_key)
+              #apaga da origem
+              s3.Object(source_bucket, key).delete()
+  
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref TriggerLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub "arn:aws:s3:::${BucketNameLeituras}"
+  # Main resources - buckets, lambda, etc - FIM
+
+Outputs:
+  SimulatorPublicIP:
+    Value: !Ref SimuladorEIP
