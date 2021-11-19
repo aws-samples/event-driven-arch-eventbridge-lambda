@@ -13,7 +13,7 @@ All resources are deployed trought the [AWS Cloudformation](https://aws.amazon.c
 
 # Setup 
 
-The main template [template.yml](template.yml) is used to set up all moving parts of the stack, including EC2 instance, security groups, IAM roles and HTTP API and different types of auth mentioned above.
+The main template [template.yml](template.yml) is used to set up all moving parts of the stack, including EC2 instance, simulator, and security groups mentioned above.
 
 ```
 aws cloudformation deploy --stack-name event-driven-architecture --template-file template.yml --capabilities CAPABILITY_IAM
