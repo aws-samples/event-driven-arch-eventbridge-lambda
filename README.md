@@ -6,9 +6,8 @@ This sample application showcases how to set up and use [Amazon S3 Event Notific
 [Amazon Lambda](https://aws.amazon.com/lambda/) to create an event-driven serverless architecture able to process files and archive such files properly.
 
 This example is composed by two applications:  
-* An external service application [simulator](simulador/main.go). It runs into an EC2 instance, and is written in Golang.  
+* An application that runs on Amazon EC2 instance, simulating an external integration - [simulator](simulador/main.go). It is written in GoLang and optimized to run on EC2 with [Amazon Graviton Processors](https://aws.amazon.com/ec2/graviton/)
 * A [lambda function](integration-lambda/app.py) written in python, which will process the files received at a predefined lambda repository.
-This SAM app uses java as language runtime for the lambda functions and custom resources.  
 
 All resources are deployed trought the [AWS Cloudformation](https://aws.amazon.com/cloudformation/) template located at [`template.yml`](template.yml).
 
