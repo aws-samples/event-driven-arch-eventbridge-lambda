@@ -10,7 +10,7 @@ This example is composed by two applications:
 * A [lambda function](integration-lambda/app.py) written in python, which will process the files received at a predefined lambda repository.
 This SAM app uses java as language runtime for the lambda functions and custom resources.  
 
-All resources are deployed trought the Cloudformation located at (template.yml)[`template.yml`].
+All resources are deployed trought the [AWS Cloudformation](https://aws.amazon.com/cloudformation/) template located at [`template.yml`](template.yml).
 
 # Setup 
 
