@@ -25,7 +25,7 @@ Resources:
   SimuladorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: blogpost-legacy-app-sg
+      GroupName: blogpost-simulador-app-sg
       GroupDescription: "Security group for SSH and HTTP connections"
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -42,7 +42,7 @@ Resources:
             /home/ec2-user/main:
               owner: ec2-user
               group: ec2-user
-              source: https://d2ftn0z9x890rg.cloudfront.net/main
+              source: https://github.com/aws-samples/event-driven-architecture-using-s3-event-notifications/releases/download/1.0.0/main
           commands:
             01-permission:
               command: !Sub | 
