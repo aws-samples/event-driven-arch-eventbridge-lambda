@@ -26,7 +26,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: blogpost-simulador-app-sg
-      GroupDescription: "Security group for SSH and HTTP connections"
+      GroupDescription: "Security group for HTTP connections"
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8080
