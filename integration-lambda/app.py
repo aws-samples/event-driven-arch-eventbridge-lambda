@@ -10,9 +10,9 @@ def lambda_handler(event, context):
     _integracao_ip = os.environ.get('INTEGRACAO_IP', '0.0.0.0') #IP do simulador
     _integracao_porta = os.environ.get('INTEGRACAO_PORTA', 8080) #POrta do simulador
     _service_url = 'http://{ip}:{porta}/poc/leitura'.format(ip=_integracao_ip, porta=_integracao_porta) #servico de mock q valida os arquivos
-    _bucket_leitura = os.environ.get('BUCKET_LEITURAS', 'leituras') #bucket de origem
-    _bucket_leitura_correta = os.environ.get('BUCKET_LEITURAS_CORRETAS', 'leituras-corretas') #bucket onde vao os arquivos processados com sucesso
-    _bucket_leitura_incorreta = os.environ.get('BUCKET_LEITURAS_INCORRETAS', 'leituras-incorretas') #nome do bucket onde vao os arquivos com erro
+    _bucket_entrada = os.environ.get('BUCKET_ENTRADA', 'leituras') #bucket de origem
+    _bucket_sucesso = os.environ.get('BUCKET_SUCESSO', 'leituras-corretas') #bucket onde vao os arquivos processados com sucesso
+    _bucket_erro = os.environ.get('BUCKET_ERRO', 'leituras-incorretas') #nome do bucket onde vao os arquivos com erro
     _codigo_retorno_ok = 0 #codigo de retorno ok
 
     #extraindo dados do bucket/arquivo que trigaram a funcao
@@ -46,9 +46,9 @@ def lambda_handler(event, context):
 
     #move o arquivo para o bucket de acordo com o codigo de retorno
     if codigoRetorno == _codigo_retorno_ok:
-        move_file(key_name, _bucket_leitura, _bucket_leitura_correta)
+        move_file(key_name, _bucket_entrada, _bucket_sucesso)
     else:
-        move_file(key_name, _bucket_leitura, _bucket_leitura_incorreta)
+        move_file(key_name, _bucket_entrada, _bucket_erro)
 
     return {
         # "statusCode": 200 if codigoRetorno == 103 else 400,
