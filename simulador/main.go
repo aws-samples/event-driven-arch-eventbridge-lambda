@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -48,6 +49,10 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodPost && r.RequestURI == "/poc/leitura":
 		CheckDadosNF(w, r)
+		return
+	case r.Method == http.MethodGet && r.RequestURI == "/poc/gerarArquivos":
+		gerarMassaTeste(100, "valido")
+		gerarMassaTeste(100, "invalido")
 		return
 	default:
 		return
@@ -106,6 +111,35 @@ func geraRetorno(CodigoErro int, Descricao string) Retorno {
 	retorno.DescricaoMotivo = Descricao
 
 	return retorno
+}
+
+func gerarMassaTeste(quantidade int64, filename string) {
+	var path string = "test/"
+	var sourceFile string = fmt.Sprintf("%s%s%s", path, filename, ".xml")
+	fmt.Printf("%s", sourceFile)
+	for i := 0; i < int(quantidade); i++ {
+		var destinationFile string = fmt.Sprintf("%s%s-%d%s", path, filename, i, ".xml")
+		copyFile(sourceFile, destinationFile)
+	}
+}
+
+func s3Upload() {
+
+}
+
+func copyFile(in, out string) (int64, error) {
+	i, e := os.Open(in)
+	if e != nil {
+		fmt.Println(e)
+		return 0, e
+	}
+	defer i.Close()
+	o, e := os.Create(out)
+	if e != nil {
+		return 0, e
+	}
+	defer o.Close()
+	return o.ReadFrom(i)
 }
 
 func internalServerError(w http.ResponseWriter, r *http.Request) {
