@@ -2,16 +2,16 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
   #lambda + s3 params
-  BucketNameLeituras:
-    Description: Nome do bucket de leituras
+  bucketNameEntrada:
+    Description: Nome do bucket de entrada dos arquivos
     Type: String
     Default: leituras
-  BucketNameLeiturasIncorretas:
-    Description: Nome do bucket para enviar arquivos com erros
+  bucketNameProcessamentoErro:
+    Description: Nome do bucket para enviar arquivos que retornaram erros
     Type: String
     Default: leituras-incorretas
-  BucketNameLeiturasCorretas:
-    Description: Nome do bucket para enviar arquivos SEM erros
+  bucketNameProcessamentoSucesso:
+    Description: Nome do bucket para enviar arquivos processados com sucesso
     Type: String
     Default: leituras-corretas
   Region:
@@ -43,6 +43,14 @@ Resources:
               owner: ec2-user
               group: ec2-user
               source: https://github.com/aws-samples/event-driven-architecture-using-s3-event-notifications/releases/download/1.0.0/main
+            /home/ec2-user/test/valido.xml:
+              owner: ec2-user
+              group: ec2-user
+              source: https://raw.githubusercontent.com/aws-samples/event-driven-architecture-using-s3-event-notifications/main/simulador/test/valido.xml
+            /home/ec2-user/test/invalido.xml:
+              owner: ec2-user
+              group: ec2-user
+              source: https://raw.githubusercontent.com/aws-samples/event-driven-architecture-using-s3-event-notifications/main/simulador/test/invalido.xml
           commands:
             01-permission:
               command: !Sub | 
@@ -99,10 +107,10 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
   
-  BucketLeituras:
+  BucketEntrada:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketNameLeituras
+      BucketName: !Ref bucketNameEntrada
       PublicAccessBlockConfiguration:
         BlockPublicAcls : true
         BlockPublicPolicy : true
@@ -113,20 +121,20 @@ Resources:
         - Event: 's3:ObjectCreated:*'
           Function: !GetAtt TriggerLambdaFunction.Arn
   
-  BucketLeiturasCorretas:
+  BucketProcessamentoSucesso:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketNameLeiturasCorretas
+      BucketName: !Ref bucketNameProcessamentoSucesso
       PublicAccessBlockConfiguration:
         BlockPublicAcls : true
         BlockPublicPolicy : true
         IgnorePublicAcls : true
         RestrictPublicBuckets : true
   
-  BucketLeiturasIncorretas:
+  BucketProcessamentoErro:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketNameLeiturasIncorretas
+      BucketName: !Ref bucketNameProcessamentoErro
       PublicAccessBlockConfiguration:
         BlockPublicAcls : true
         BlockPublicPolicy : true
@@ -146,9 +154,9 @@ Resources:
         Variables:
           INTEGRACAO_IP: !Ref SimuladorEIP
           INTEGRACAO_PORTA: 8080
-          BUCKET_LEITURAS: !Ref BucketNameLeituras
-          BUCKET_LEITURAS_CORRETAS: !Ref BucketNameLeiturasCorretas
-          BUCKET_LEITURAS_INCORRETAS: !Ref BucketNameLeiturasIncorretas
+          BUCKET_ENTRADA: !Ref bucketNameEntrada
+          BUCKET_SUCESSO: !Ref bucketNameProcessamentoSucesso
+          BUCKET_ERRO: !Ref bucketNameProcessamentoErro
       TracingConfig:
         Mode: Active
       Handler: index.lambda_handler
@@ -164,11 +172,11 @@ Resources:
           def lambda_handler(event, context):
 
               _integracao_ip = os.environ.get('INTEGRACAO_IP', '0.0.0.0') #IP do simulador
-              _integracao_porta = os.environ.get('INTEGRACAO_PORTA', 8080) #Porta do simulador
+              _integracao_porta = os.environ.get('INTEGRACAO_PORTA', 8080) #POrta do simulador
               _service_url = 'http://{ip}:{porta}/poc/leitura'.format(ip=_integracao_ip, porta=_integracao_porta) #servico de mock q valida os arquivos
-              _bucket_leitura = os.environ.get('BUCKET_LEITURAS', 'leituras') #bucket de origem
-              _bucket_leitura_correta = os.environ.get('BUCKET_LEITURAS_CORRETAS', 'leituras-corretas') #bucket onde vao os arquivos processados com sucesso
-              _bucket_leitura_incorreta = os.environ.get('BUCKET_LEITURAS_INCORRETAS', 'leituras-incorretas') #nome do bucket onde vao os arquivos com erro
+              _bucket_entrada = os.environ.get('BUCKET_ENTRADA', 'leituras') #bucket de origem
+              _bucket_sucesso = os.environ.get('BUCKET_SUCESSO', 'leituras-corretas') #bucket onde vao os arquivos processados com sucesso
+              _bucket_erro = os.environ.get('BUCKET_ERRO', 'leituras-incorretas') #nome do bucket onde vao os arquivos com erro
               _codigo_retorno_ok = 0 #codigo de retorno ok
 
               #extraindo dados do bucket/arquivo que trigaram a funcao
@@ -202,9 +210,9 @@ Resources:
 
               #move o arquivo para o bucket de acordo com o codigo de retorno
               if codigoRetorno == _codigo_retorno_ok:
-                  move_file(key_name, _bucket_leitura, _bucket_leitura_correta)
+                  move_file(key_name, _bucket_entrada, _bucket_sucesso)
               else:
-                  move_file(key_name, _bucket_leitura, _bucket_leitura_incorreta)
+                  move_file(key_name, _bucket_entrada, _bucket_erro)
 
               return {
                   # "statusCode": 200 if codigoRetorno == 103 else 400,
@@ -234,7 +242,7 @@ Resources:
       FunctionName: !Ref TriggerLambdaFunction
       Principal: s3.amazonaws.com
       SourceAccount: !Ref "AWS::AccountId"
-      SourceArn: !Sub "arn:aws:s3:::${BucketNameLeituras}"
+      SourceArn: !Sub "arn:aws:s3:::${bucketNameEntrada}"
   # Main resources - buckets, lambda, etc - FIM
 
 Outputs:

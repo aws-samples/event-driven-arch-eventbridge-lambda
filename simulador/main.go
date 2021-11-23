@@ -1,11 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //to test
@@ -51,8 +57,10 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		CheckDadosNF(w, r)
 		return
 	case r.Method == http.MethodGet && r.RequestURI == "/poc/gerarArquivos":
-		gerarMassaTeste(100, "valido")
-		gerarMassaTeste(100, "invalido")
+		// make async calls to method and return a success code to user
+		w.WriteHeader(http.StatusCreated)
+		go gerarMassaTeste(100, "valido")
+		go gerarMassaTeste(100, "invalido")
 		return
 	default:
 		return
@@ -114,32 +122,44 @@ func geraRetorno(CodigoErro int, Descricao string) Retorno {
 }
 
 func gerarMassaTeste(quantidade int64, filename string) {
-	var path string = "test/"
-	var sourceFile string = fmt.Sprintf("%s%s%s", path, filename, ".xml")
-	fmt.Printf("%s", sourceFile)
+	var testFilePath string = "test/"
+	var sourceFile string = fmt.Sprintf("%s%s%s", testFilePath, filename, ".xml")
+	var destinationBucket string = getEnv("SIMULADOR_BUCKET_ENTRADA", "upload-test-22112021")
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatalf("Failed to load configuration, %v", err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+
 	for i := 0; i < int(quantidade); i++ {
-		var destinationFile string = fmt.Sprintf("%s%s-%d%s", path, filename, i, ".xml")
-		copyFile(sourceFile, destinationFile)
+		fileToUpload, err := os.Open(sourceFile)
+		if err != nil {
+			log.Println("Unable to open file ", fileToUpload)
+			return
+		}
+		defer fileToUpload.Close()
+		var key string = fmt.Sprintf("%s-%d%d%s", filename, time.Now().UnixMicro(), i, ".xml")
+		_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: aws.String(destinationBucket),
+			Key:    aws.String(key),
+			Body:   fileToUpload,
+		})
+
+		if err != nil {
+			log.Fatalf("Failed to upload file, %v", err)
+		}
 	}
 }
 
-func s3Upload() {
-
-}
-
-func copyFile(in, out string) (int64, error) {
-	i, e := os.Open(in)
-	if e != nil {
-		fmt.Println(e)
-		return 0, e
+// getEnv get key environment variable if exist otherwise return defalutValue
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
 	}
-	defer i.Close()
-	o, e := os.Create(out)
-	if e != nil {
-		return 0, e
-	}
-	defer o.Close()
-	return o.ReadFrom(i)
+	return value
 }
 
 func internalServerError(w http.ResponseWriter, r *http.Request) {
