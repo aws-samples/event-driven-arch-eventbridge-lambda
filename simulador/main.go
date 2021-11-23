@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -51,7 +50,7 @@ type Retorno struct {
 }
 
 func ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.RequestURI)
+	fmt.Println("Request feito para a URI ", r.RequestURI)
 	switch {
 	case r.Method == http.MethodPost && r.RequestURI == "/poc/leitura":
 		CheckDadosNF(w, r)
@@ -122,35 +121,41 @@ func geraRetorno(CodigoErro int, Descricao string) Retorno {
 }
 
 func gerarMassaTeste(quantidade int64, filename string) {
+	fmt.Println("Inicio - geração da massa de testes")
 	var testFilePath string = "test/"
 	var sourceFile string = fmt.Sprintf("%s%s%s", testFilePath, filename, ".xml")
 	var destinationBucket string = getEnv("SIMULADOR_BUCKET_ENTRADA", "upload-test-22112021")
+	fmt.Println("Bucket de entrada: ", destinationBucket)
 
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		log.Fatalf("Failed to load configuration, %v", err)
+		fmt.Println("Failed to load configuration: ", err)
 	}
-
+	fmt.Println("Iniciando client s3")
 	client := s3.NewFromConfig(cfg)
 
 	for i := 0; i < int(quantidade); i++ {
+		fmt.Println("Abrindo arquivo modelo")
 		fileToUpload, err := os.Open(sourceFile)
 		if err != nil {
-			log.Println("Unable to open file ", fileToUpload)
+			fmt.Println("Unable to open file ", fileToUpload)
 			return
 		}
 		defer fileToUpload.Close()
 		var key string = fmt.Sprintf("%s-%d%d%s", filename, time.Now().UnixMicro(), i, ".xml")
-		_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		fmt.Println("Enviando arquivo para S3: ", key)
+		returnFromS3, err := client.PutObject(context.TODO(), &s3.PutObjectInput{
 			Bucket: aws.String(destinationBucket),
 			Key:    aws.String(key),
 			Body:   fileToUpload,
 		})
+		fmt.Println("retorno s3: ", returnFromS3)
 
 		if err != nil {
-			log.Fatalf("Failed to upload file, %v", err)
+			fmt.Println("Failed to upload file: ", err)
 		}
 	}
+	fmt.Println("Fim - geração da massa de testes")
 }
 
 // getEnv get key environment variable if exist otherwise return defalutValue

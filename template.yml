@@ -21,7 +21,28 @@ Parameters:
 
 Resources:
 
-  #Simulador
+  #Simulador - Role, Instance Profile, Policy
+  SimuladorInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref AdministratorRole
+  AdministratorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  #Simulador - Instance
   SimuladorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -32,6 +53,10 @@ Resources:
           FromPort: 8080
           ToPort: 8080
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 201.82.35.117/32
   
   SimuladorInstance:
     Type: AWS::EC2::Instance
@@ -58,9 +83,10 @@ Resources:
               cwd: /home/ec2-user
             02-run:
               command: !Sub | 
-                nohup /home/ec2-user/main &
+                AWS_REGION=${Region} SIMULADOR_BUCKET_ENTRADA=${bucketNameEntrada} nohup /home/ec2-user/main > main.out &
               cwd: /home/ec2-user
     Properties:
+      IamInstanceProfile: !Ref SimuladorInstanceProfile
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
@@ -81,6 +107,7 @@ Resources:
             yum install -y aws-cfn-bootstrap
             # Call cfn-init script to install files and packages
             /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource SimuladorInstance --region ${AWS::Region}  
+          
   SimuladorEIP:
     Type: AWS::EC2::EIP
     Properties:

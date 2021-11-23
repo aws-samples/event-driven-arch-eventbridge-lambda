@@ -64,8 +64,8 @@ def move_file(key, source_bucket, destination_bucket):
         'Bucket': source_bucket,
         'Key': key
     }
-    #gera um arquivo com o nome timestamp-nome para ser enviado
-    destination_key = '{ts}-{key}'.format(ts = time.strftime("%Y%m%d%H%M%S"), key=key)
+    #vamos apenas mover o arquivo entre buckets, nenhum rename é necessário aqui
+    destination_key = key
     #copia o arquivo pro bucket de destino
     s3.meta.client.copy(copy_source, destination_bucket, destination_key)
     #apaga da origem
