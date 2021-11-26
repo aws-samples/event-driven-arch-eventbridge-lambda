@@ -25,9 +25,9 @@ Successfully created/updated stack - event-driven-architecture
 
 You can also customize the following parameters on template call:
 
-`BucketNameLeituras` - bucket to upload your example files.  
-`BucketNameLeiturasCorretas` - bucket that will receive files processed with success.  
-`BucketNameLeiturasIncorretas` - bucket that will receive files processed NOT successfully.  
+`BucketNameEntrada` - bucket to upload your example files.  
+`BucketNameProcessamentoSucesso` - bucket that will receive files processed with success.  
+`BucketNameProcessamentoErro` - bucket that will receive files processed NOT successfully.  
 
 ## Security
 

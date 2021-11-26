@@ -53,10 +53,6 @@ Resources:
           FromPort: 8080
           ToPort: 8080
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 201.82.35.117/32
   
   SimuladorInstance:
     Type: AWS::EC2::Instance
@@ -272,5 +268,7 @@ Resources:
   # Main resources - buckets, lambda, etc - FIM
 
 Outputs:
-  SimulatorPublicIP:
-    Value: !Ref SimuladorEIP
+  URLServico:
+    Value: !Sub "http://${SimuladorEIP}:8080/poc/leitura"
+  URLGeradorMassaTeste:
+    Value: !Sub "http://${SimuladorEIP}:8080/poc/gerarMassaTeste"

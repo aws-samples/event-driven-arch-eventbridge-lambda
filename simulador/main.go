@@ -55,7 +55,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPost && r.RequestURI == "/poc/leitura":
 		CheckDadosNF(w, r)
 		return
-	case r.Method == http.MethodGet && r.RequestURI == "/poc/gerarArquivos":
+	case r.Method == http.MethodGet && r.RequestURI == "/poc/gerarMassaTeste":
 		// make async calls to method and return a success code to user
 		w.WriteHeader(http.StatusCreated)
 		go gerarMassaTeste(100, "valido")
