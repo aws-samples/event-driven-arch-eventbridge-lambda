@@ -57,9 +57,9 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.Method == http.MethodGet && r.RequestURI == "/poc/gerarMassaTeste":
 		// make async calls to method and return a success code to user
-		w.WriteHeader(http.StatusCreated)
 		go gerarMassaTeste(100, "valido")
 		go gerarMassaTeste(100, "invalido")
+		w.WriteHeader(http.StatusCreated)
 		return
 	default:
 		return
@@ -75,7 +75,7 @@ func CheckDadosNF(w http.ResponseWriter, r *http.Request) {
 	var nf NF
 	if err := xml.NewDecoder(r.Body).Decode(&nf); err != nil {
 		fmt.Printf("%s", err)
-		internalServerError(w, r)
+		internalServerError(w)
 		return
 	}
 
@@ -93,7 +93,7 @@ func CheckDadosNF(w http.ResponseWriter, r *http.Request) {
 
 	xmlRetorno, err := xml.Marshal(geraRetorno(codigoErro, descricaoErro))
 	if err != nil {
-		internalServerError(w, r)
+		internalServerError(w)
 		return
 	}
 
@@ -158,7 +158,7 @@ func gerarMassaTeste(quantidade int64, filename string) {
 	fmt.Println("Fim - geração da massa de testes")
 }
 
-// getEnv get key environment variable if exist otherwise return defalutValue
+// getEnv get key environment variable if exist otherwise return default value
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
@@ -167,7 +167,7 @@ func getEnv(key, defaultValue string) string {
 	return value
 }
 
-func internalServerError(w http.ResponseWriter, r *http.Request) {
+func internalServerError(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte("internal server error"))
 }
