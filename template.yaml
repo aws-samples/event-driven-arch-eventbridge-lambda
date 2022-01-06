@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  bp-event-driven-architecture-using-event-bridge
+
+  Sample SAM Template for bp-event-driven-architecture-using-event-bridge
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: python3.9
+    Handler: app.handler
+    Architectures:
+      - arm64
+    Timeout: 3
+    Tracing: Active
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension-Arm64:1"
+
+Resources:
+  BucketReceiver:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        EventBridgeConfiguration: {}
+  
+  ProcessFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/process_file/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["aws.s3"],
+                "detail-type": ["Object Created"],
+                "detail": {
+                  "bucket": {
+                  "name": ["${BucketReceiver}"]
+                  }
+                }
+              }
+  
+  NonSamResources:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # The path starts with '../..' as this will be evaluated from the
+      # warehouse/build folder, not the warehouse folder.
+      TemplateURL: templates/non-sam-resources.yaml
+
+# Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  # HelloWorldFunction:
+  #   Description: "Hello World Lambda Function ARN"
+  #   Value: !GetAtt HelloWorldFunction.Arn
+  # HelloWorldFunctionIamRole:
+  #   Description: "Implicit IAM Role created for Hello World function"
+  #   Value: !GetAtt HelloWorldFunctionRole.Arn

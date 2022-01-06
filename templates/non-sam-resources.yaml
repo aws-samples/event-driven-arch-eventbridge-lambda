@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  #lambda + s3 params
+  trailBucketName:
+    Description: Nome do bucket para o cloudtrail
+    Type: String
+    Default: blogpost-eventdriven-trail-bucket
+
+Resources:
+  CloudTrailBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref trailBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+
+  CloudTrailBucketPolicy:
+    DependsOn:
+        - CloudTrailBucket
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudTrailBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AWSCloudTrailAclCheck"
+            Effect: Allow
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: "s3:GetBucketAcl"
+            Resource: !Sub arn:aws:s3:::${CloudTrailBucket}
+          - Sid: "AWSCloudTrailWrite"
+            Effect: Allow
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: "s3:PutObject"
+            Resource: !Sub arn:aws:s3:::${CloudTrailBucket}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+
+  EventBridgeTrail:
+    DependsOn: 
+      - CloudTrailBucket
+      - CloudTrailBucketPolicy
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      EventSelectors:
+        - DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "arn:aws:s3:::"
+          IncludeManagementEvents: false
+          ReadWriteType: All
+      IncludeGlobalServiceEvents: false
+      IsLogging: true
+      S3BucketName: !Ref CloudTrailBucket
+      TrailName: "blogpost-eventdriven-trail"
