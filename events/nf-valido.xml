@@ -1,0 +1,21 @@
+<nf>
+    <tpAmb>2</tpAmb>
+    <tpTransm>N</tpTransm>
+    <dhTransm>2021-07-23T21:14:00-03:00</dhTransm>
+    <infLeitura>
+      <cUF>11</cUF>
+      <dhPass>2021-07-23T21:14:00-03:00</dhPass>
+      <CNPJOper>76500680000174</CNPJOper>
+      <cEQP>012345678901234</cEQP>
+      <latitude>1.970942</latitude>
+      <longitude>6.680008</longitude>
+      <tpSentido>E</tpSentido>
+      <placa>PIA2A19</placa>
+      <tpVeiculo>3</tpVeiculo>
+      <velocidade>120</velocidade>
+      <foto>cXVhZXF1YWVxdWFlcXVhZQ==</foto>
+      <indiceConfianca>95</indiceConfianca>
+      <pesoBrutoTotal>120</pesoBrutoTotal>
+      <nroEixos>3</nroEixos>
+    </infLeitura>
+  </nf>

@@ -27,7 +27,10 @@ Resources:
   ProcessFileFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/process_file/
+      CodeUri: lambdas/file_receiver/
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref BucketReceiver
       Events:
         Trigger:
           Type: EventBridgeRule
