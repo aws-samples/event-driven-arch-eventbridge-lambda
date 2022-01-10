@@ -16,6 +16,9 @@ Globals:
     Tracing: Active
     Layers:
       - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension-Arm64:1"
+    Environment:
+      Variables:
+        LOG_LEVEL: DEBUG
 
 Resources:
   FileReceiverBucket:
@@ -69,25 +72,32 @@ Resources:
   OnFileconvertedErrorQueue:
     Type: AWS::SQS::Queue
 
-  OnFileConvertedErrorFunction:
-    Type: AWS::Serverless::Function
+
+  OnFileConvertedErrorEBRule:
+    Type: AWS::Events::Rule
     Properties:
-      CodeUri: lambdas/on_file_converted_error/
-      Events:
-        Trigger:
-          Type: EventBridgeRule
-          Properties:
-            Pattern: !Sub |
-              {
-                "source": ["NFProcessor.file_receiver"],
-                "detail-type": ["file-converted-error"]
-              }
-      Environment:
-        Variables:
-          ERROR_QUEUE_NAME: !Ref OnFileconvertedErrorQueue  
-      Policies:
-        - SQSSendMessagePolicy:
-            QueueName: !Ref OnFileconvertedErrorQueue  
+      EventPattern: !Sub |
+        {
+          "source": ["NFProcessor.file_receiver"],
+          "detail-type": ["file-converted-error"]
+        }
+      Targets:
+        - Arn: !GetAtt OnFileconvertedErrorQueue.Arn
+          Id: "FileConvertedErrorQueue"
+  
+  # Allow EventBridge to invoke SQS
+  EventBridgeToToSqsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: SQS:SendMessage
+          Resource:  !GetAtt OnFileconvertedErrorQueue.Arn
+      Queues:
+        - Ref: OnFileconvertedErrorQueue
   
   NonSamResources:
     Type: AWS::CloudFormation::Stack

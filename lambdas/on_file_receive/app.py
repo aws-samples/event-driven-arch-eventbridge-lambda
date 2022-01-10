@@ -3,6 +3,7 @@ import json
 import xmltodict
 import boto3
 import datetime
+import sys
 
 logger = Logger()
 s3 = boto3.resource('s3')
@@ -24,32 +25,44 @@ def handler(event, context):
     generateEvent(jsonPayload)
 
 def convertFromXmlToJson(bucket, key):
-    fileContent = s3.Object(bucket, key).get()['Body'].read()
+    fileContent = s3.Object(bucket, key).get()['Body'].read().decode('utf-8')
     try:
         jsonContent = xmltodict.parse(fileContent)
         jsonContent.update({"filename": key})
         return json.dumps(jsonContent)
-    except: 
-        #in case of errors, we send the content "as-is" to an specific route, that will work it out
-        generateEvent(json.dumps({"filename": key}), status="file-converted-error")
-
+    except Exception as e: 
         logger.error({
             "message": "Error converting file {} on bucket{}".format(key, bucket),
             "file": key,
             }, 
             exc_info=True)
+        #in case of errors, we send the content a little bit more strucuted in order to help on further steps
+        payload = json.dumps({
+            "filename": key,
+            "exception": str(e),
+            "fileContent": str(fileContent)
+        })
+        generateEvent(payload, status="file-converted-error")
         return None
 
 def generateEvent(payload, status="file-converted"):
     logger.info({
-        "message": "Sending event {} with payload {}".format(status, payload)
+        "message": "Sending event {}".format(status),
+        "payload": payload
     })
-    
     event = {
         "Time": datetime.datetime.now(),
         "Source": "NFProcessor.file_receiver",
         "DetailType": status,
         "Detail": payload
     }
-    eventBrigePutReturn = eventBridge.put_events(Entries = [event])
-    print(eventBrigePutReturn)
+    logger.debug({
+        "message": "event final payload",
+        "payload": payload
+        })
+
+    eventBridgePutReturn = eventBridge.put_events(Entries = [event])
+    logger.debug({
+        "message": "Event Bridge PUT return",
+        "eventBridgePutReturn": eventBridgePutReturn
+        })
