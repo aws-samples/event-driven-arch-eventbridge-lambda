@@ -23,14 +23,18 @@ def handler(event, context):
             "message": "Skipping file {}. Check exception bellow".format(key, bucket),
             "file": key
         })
+        
         return None
     
-    print(generateEvent(jsonPayload))
+    eventBridge.put_events(
+        Entries = [generateEvent(jsonPayload)]
+    )
 
 def convertFromXmlToJson(bucket, key):
     fileContent = s3.Object(bucket, key).get()['Body'].read()
     try:
         jsonContent = xmltodict.parse(fileContent)
+        jsonContent.update({"filename": key})
         return json.dumps(jsonContent)
     except: 
         logger.error({
@@ -40,10 +44,11 @@ def convertFromXmlToJson(bucket, key):
             exc_info=True)
         return None
 
-def generateEvent(payload):
+def generateEvent(payload, status="file-converted"):
     event = {
         "Time": datetime.datetime.now(),
-        "Source": "nfprocessor.file_receiver",
-        "detail": payload
+        "Source": "NFProcessor.file_receiver",
+        "DetailType": status,
+        "Detail": payload
     }
     return event

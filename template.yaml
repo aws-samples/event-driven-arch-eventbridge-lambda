@@ -18,19 +18,16 @@ Globals:
       - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension-Arm64:1"
 
 Resources:
-  BucketReceiver:
+  FileReceiverBucket:
     Type: AWS::S3::Bucket
     Properties:
       NotificationConfiguration:
         EventBridgeConfiguration: {}
   
-  ProcessFileFunction:
+  OnFileReceiveFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/file_receiver/
-      Policies:
-        - S3FullAccessPolicy:
-            BucketName: !Ref BucketReceiver
+      CodeUri: lambdas/on_file_receive/
       Events:
         Trigger:
           Type: EventBridgeRule
@@ -41,9 +38,32 @@ Resources:
                 "detail-type": ["Object Created"],
                 "detail": {
                   "bucket": {
-                  "name": ["${BucketReceiver}"]
+                  "name": ["${FileReceiverBucket}"]
                   }
                 }
+              }
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref FileReceiverBucket
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+  
+  OnFileConvertedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_converted/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.file_receiver"],
+                "detail-type": ["file-converted"]
               }
   
   NonSamResources:
