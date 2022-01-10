@@ -23,7 +23,7 @@ Resources:
     Properties:
       NotificationConfiguration:
         EventBridgeConfiguration: {}
-  
+
   OnFileReceiveFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -65,6 +65,29 @@ Resources:
                 "source": ["NFProcessor.file_receiver"],
                 "detail-type": ["file-converted"]
               }
+
+  OnFileconvertedErrorQueue:
+    Type: AWS::SQS::Queue
+
+  OnFileConvertedErrorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_converted_error/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.file_receiver"],
+                "detail-type": ["file-converted-error"]
+              }
+      Environment:
+        Variables:
+          ERROR_QUEUE_NAME: !Ref OnFileconvertedErrorQueue  
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !Ref OnFileconvertedErrorQueue  
   
   NonSamResources:
     Type: AWS::CloudFormation::Stack
