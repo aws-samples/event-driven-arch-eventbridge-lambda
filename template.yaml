@@ -54,7 +54,7 @@ Resources:
               Action:
                 - events:PutEvents
               Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
-  
+
   OnFileConvertedFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -68,10 +68,16 @@ Resources:
                 "source": ["NFProcessor.file_receiver"],
                 "detail-type": ["file-converted"]
               }
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
   OnFileconvertedErrorQueue:
     Type: AWS::SQS::Queue
-
 
   OnFileConvertedErrorEBRule:
     Type: AWS::Events::Rule
@@ -98,6 +104,37 @@ Resources:
           Resource:  !GetAtt OnFileconvertedErrorQueue.Arn
       Queues:
         - Ref: OnFileconvertedErrorQueue
+
+  FileStatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: filename
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: filename
+          KeyType: HASH
+
+  OnFileValidatedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_validated/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.file_validator"],
+                "detail-type": ["file-validated"]
+              }
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FileStatusTable
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref FileStatusTable
   
   NonSamResources:
     Type: AWS::CloudFormation::Stack
