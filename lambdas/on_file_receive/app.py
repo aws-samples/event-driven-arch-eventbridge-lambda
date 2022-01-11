@@ -3,7 +3,6 @@ import json
 import xmltodict
 import boto3
 import datetime
-import sys
 
 logger = Logger()
 s3 = boto3.resource('s3')
