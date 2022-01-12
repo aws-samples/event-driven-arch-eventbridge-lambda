@@ -6,9 +6,6 @@ Parameters:
     Description: Bucket that will be used by cloudtrail
 Resources:
   EventBridgeTrail:
-    # DependsOn: 
-    #   - CloudTrailBucket
-    #   - CloudTrailBucketPolicy
     Type: AWS::CloudTrail::Trail
     Properties: 
       EventSelectors:
