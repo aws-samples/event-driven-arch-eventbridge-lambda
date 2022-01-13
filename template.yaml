@@ -170,12 +170,32 @@ Resources:
             TableName: !Ref FileStatusTable
       Environment:
         Variables:
-          DDB_TABLE_NAME: !Ref FileStatusTable  
+          DDB_TABLE_NAME: !Ref FileStatusTable
+  
+  #file generator
+  FilesGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/files_generator/
+      Timeout: 600
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref FileReceiverBucket
+      Environment:
+        Variables:
+          DESTINATION_BUCKET: !Ref FileReceiverBucket
+      Events:
+        GenerateLoad:
+          Type: Api
+          Properties:
+            Path: /filegenerator
+            Method: get
   
   #Custom resource
   #bucket cleaner(empties the buckets prior to deletion)
   S3CleanerFunction:
     Type: AWS::Serverless::Function
+    Timeout: 600
     Properties:
       CodeUri: lambdas/custom_resource_s3cleaner/
       Policies:
@@ -198,22 +218,11 @@ Resources:
   NonSamResources:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # The path starts with '../..' as this will be evaluated from the
-      # warehouse/build folder, not the warehouse folder.
       TemplateURL: templates/non-sam-resources.yaml
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucket
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  # HelloWorldFunction:
-  #   Description: "Hello World Lambda Function ARN"
-  #   Value: !GetAtt HelloWorldFunction.Arn
-  # HelloWorldFunctionIamRole:
-  #   Description: "Implicit IAM Role created for Hello World function"
-  #   Value: !GetAtt HelloWorldFunctionRole.Arn
-  CloudTrailBucketName:
-    Description: "Bucket name for CloudTrail stack"
-    Value: !Ref CloudTrailBucket
+  FileGeneratorAPI:
+    Description: "Address to generate the files for testing"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/filegenerator?numberOfFiles=100"
