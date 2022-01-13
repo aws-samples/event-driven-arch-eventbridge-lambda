@@ -177,6 +177,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambdas/files_generator/
+      MemorySize: 256
       Timeout: 600
       Policies:
         - S3CrudPolicy:

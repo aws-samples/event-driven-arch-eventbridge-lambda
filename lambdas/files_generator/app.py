@@ -75,6 +75,6 @@ def generateFiles(bucket, numberOfFiles):
         })
         placa = "AWS2022"
         timeNow = datetime.now()
-        xmlBody = xmlTemplate.format(timeNow, placa).encode("utf-8").replace("</infLeitura>", "")
+        xmlBody = xmlTemplate.format(timeNow, placa).replace("</infLeitura>", "").encode("utf-8")
         key = "invalid-nf-{}.xml".format(time.time())
         s3.Bucket(bucket).put_object(Key=key, Body=xmlBody)
