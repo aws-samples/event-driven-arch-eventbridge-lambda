@@ -1,6 +1,7 @@
 from aws_lambda_powertools.logging.logger import Logger
 import boto3
 import os
+from datetime import datetime
 
 logger = Logger()
 ddb = boto3.resource('dynamodb')
@@ -33,6 +34,7 @@ def saveToDatabase(filename, validationMessage):
         Item={
             'filename': filename,
             'status': status,
+            'datetime': datetime.utcnow().isoformat(),
             'validation_error': validationMessage
             }
     )
