@@ -208,6 +208,7 @@ Resources:
   S3CleanerCustomResource:
     Type: Custom::S3Cleaner
     Properties:
+      Timeout: 600
       ServiceToken: !GetAtt S3CleanerFunction.Arn
       FileReceiverBucketName: !Ref FileReceiverBucket
       EBTrailBucketName: !Ref CloudTrailBucket
