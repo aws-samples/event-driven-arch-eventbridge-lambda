@@ -1,3 +1,4 @@
 aws-lambda-powertools
 xmltodict
 boto3
+wheel

@@ -1,2 +1,3 @@
 crhelper
 boto3
+wheel
