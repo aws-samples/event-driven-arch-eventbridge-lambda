@@ -10,8 +10,6 @@ Globals:
   Function:
     Runtime: python3.9
     Handler: app.handler
-    Architectures:
-      - arm64
     Timeout: 3
     Tracing: Active
     Layers:
