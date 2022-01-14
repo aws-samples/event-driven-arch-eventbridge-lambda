@@ -1,0 +1,22 @@
+openapi: "3.0.1"
+info:
+  title: "BlogPost API"
+paths:
+  /filegenerator:
+    post:
+      responses:
+        default:
+          description: "Send a request to generate files"
+      x-amazon-apigateway-integration:
+        integrationSubtype: "EventBridge-PutEvents"
+        credentials:
+          Fn::GetAtt: [FileGeneratorAPIRole, Arn]
+        requestParameters:
+          # Detail: "$input.params().querystring.get('numberOffiles')"
+          DetailType: ["file_generator_request"]
+          Source: ["NFProcessor.api"]
+          Detail: "$request.body.Detail"
+        payloadFormatVersion: "1.0"
+        type: "aws_proxy"
+        connectionType: "INTERNET"
+x-amazon-apigateway-importexport-version: "1.0"

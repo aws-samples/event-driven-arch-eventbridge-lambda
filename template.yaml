@@ -127,7 +127,7 @@ Resources:
           Id: "FileConvertedErrorQueue"
   
   # Allow EventBridge to invoke SQS
-  EventBridgeToToSqsPolicy:
+  EventBridgeToToSqsPolicyRole:
     Type: AWS::SQS::QueuePolicy
     Properties:
       PolicyDocument:
@@ -173,27 +173,63 @@ Resources:
           DDB_TABLE_NAME: !Ref FileStatusTable
   
   #file generator
+  #role for API
+  FileGeneratorAPIRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "apigateway.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: ApiDirectWriteEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              Action:
+              - events:PutEvents
+              Effect: Allow
+              Resource:
+                - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+  #API definition
+  FileGeneratorApiGateway:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefinitionBody:
+        'Fn::Transform':
+          Name: 'AWS::Include'
+          Parameters:
+            Location: 'templates/api.yaml'
+
+    
   FilesGeneratorFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambdas/files_generator/
       MemorySize: 256
       Timeout: 600
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.api"],
+                "detail-type": ["file_generator_request"]
+              }
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref FileReceiverBucket
       Environment:
         Variables:
           DESTINATION_BUCKET: !Ref FileReceiverBucket
-      Events:
-        GenerateLoad:
-          Type: Api
-          Properties:
-            Path: /filegenerator
-            Method: get
-  
+
   #Custom resource
-  #bucket cleaner(empties the buckets prior to deletion)
+  #bucket cleaner(empties the bucketeiifccrcnhs prior to deletion)
   S3CleanerFunction:
     Type: AWS::Serverless::Function
     Timeout: 600
@@ -227,4 +263,4 @@ Resources:
 Outputs:
   FileGeneratorAPI:
     Description: "Address to generate the files for testing"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/filegenerator?numberOfFiles=100"
+    Value: !Sub "https://${FileGeneratorApiGateway}.execute-api.${AWS::Region}.amazonaws.com/filegenerator?numberOfFiles=100"
