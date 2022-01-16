@@ -12,8 +12,11 @@ s3 = boto3.resource('s3')
 _incorrect_factor = 0.20
 
 def handler(event, context):
+    logger.debug({
+        "event": event
+    })
     bucket = os.getenv("DESTINATION_BUCKET")
-    numberOfFiles = int(event["queryStringParameters"]['numberOfFiles'])
+    numberOfFiles = event["detail"]['numberOfFiles']
 
     logger.info({
         "message": "Starting to generate {} files on bucket{}".format(numberOfFiles, bucket)
@@ -69,9 +72,10 @@ def generateFiles(bucket, numberOfFiles):
         s3.Bucket(bucket).put_object(Key=key, Body=xmlBody)
 
     #Generating BAD-FORMED files(20%)
-    for x in range(round(numberOfFiles * _incorrect_factor)):
+    numberOfIncorrectFiles = round(numberOfFiles * _incorrect_factor)
+    for x in range(numberOfIncorrectFiles):
         logger.debug({
-            "message": "Generating bad-formated file {} out of {}".format(x, numberOfFiles)
+            "message": "Generating bad-formated file {} out of {}".format(x, numberOfIncorrectFiles)
         })
         placa = "AWS2022"
         timeNow = datetime.now()

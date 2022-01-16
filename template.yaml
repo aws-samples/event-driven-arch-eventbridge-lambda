@@ -12,8 +12,6 @@ Globals:
     Handler: app.handler
     Timeout: 3
     Tracing: Active
-    Layers:
-      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension-Arm64:1"
     Environment:
       Variables:
         LOG_LEVEL: DEBUG
@@ -170,9 +168,9 @@ Resources:
         Variables:
           DDB_TABLE_NAME: !Ref FileStatusTable
   
-  #file generator
+  #file generator API
   #role for API
-  FileGeneratorAPIRole:
+  FilesGeneratorAPIRole:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -194,7 +192,7 @@ Resources:
               Resource:
                 - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
   #API definition
-  FileGeneratorApiGateway:
+  FilesGeneratorHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       DefinitionBody:
@@ -202,7 +200,6 @@ Resources:
           Name: 'AWS::Include'
           Parameters:
             Location: 'templates/api.yaml'
-
     
   FilesGeneratorFunction:
     Type: AWS::Serverless::Function
@@ -261,4 +258,4 @@ Resources:
 Outputs:
   FileGeneratorAPI:
     Description: "Address to generate the files for testing"
-    Value: !Sub "https://${FileGeneratorApiGateway}.execute-api.${AWS::Region}.amazonaws.com/filegenerator?numberOfFiles=100"
+    Value: !Sub "https://${FilesGeneratorHttpApi}.execute-api.${AWS::Region}.amazonaws.com/filesgenerator?numberOfFiles=100"
