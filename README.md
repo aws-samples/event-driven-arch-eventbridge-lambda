@@ -93,13 +93,16 @@ You should get a return like the following:
 Meaning an event has been created. Refer to the blogpost for further details.
 
 # Undeploy
-execute the following commands, replacing the values between `<>` by the actual values returned during deployment.
+To remove all the created resources, perform the following actions on [AWS Console](http://console.aws.amazon.com):
 
-```
-aws s3 rm s3://<FileReceiverBucket_Value>/ --recursive
-aws s3 rm s3://<CloudTrailBucket_Value>/ --recursive
-sam delete --no-prompts
-```
+1. Go to your AWS S3 console
+2. Search for the `FileReceiver` bucket on list. Select it
+3. Click on "Empty" button and confirm the exclusion.
+4. Search for the `CloudTrailBucket` bucket on list. Select it
+5. Click on "Empty" button and confirm the exclusion.
+6. Go to AWS CloudFormation console page
+7. Select the stack created using SAM
+8. Click on Delete button and confirm
 
 ## Security
 
