@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  CloudTrailBucketName:
+    Type: String
+    Description: Bucket that will be used by cloudtrail
+Resources:
+  EventBridgeTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      EventSelectors:
+        - DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "arn:aws:s3:::"
+          IncludeManagementEvents: false
+          ReadWriteType: All
+      IncludeGlobalServiceEvents: false
+      IsLogging: true
+      S3BucketName: !Ref CloudTrailBucketName
+      TrailName: "blogpost-eventdriven-trail"

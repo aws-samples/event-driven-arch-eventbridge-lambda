@@ -1,0 +1,263 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  bp-event-driven-architecture-using-event-bridge
+
+  Sample SAM Template for bp-event-driven-architecture-using-event-bridge
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: python3.9
+    Handler: app.handler
+    Timeout: 3
+    Tracing: Active
+    Environment:
+      Variables:
+        LOG_LEVEL: DEBUG
+
+Resources:
+  #cloudtrail bucket and policy for eventbridge
+  #this cloudtrail bucket will be used on temapltes/non-sam-resources.yaml
+  #as SAM does not handle cloudtrail creation
+  CloudTrailBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+
+  CloudTrailBucketPolicy:
+    DependsOn:
+        - CloudTrailBucket
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudTrailBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AWSCloudTrailAclCheck"
+            Effect: Allow
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: "s3:GetBucketAcl"
+            Resource: !Sub arn:aws:s3:::${CloudTrailBucket}
+          - Sid: "AWSCloudTrailWrite"
+            Effect: Allow
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: "s3:PutObject"
+            Resource: !Sub arn:aws:s3:::${CloudTrailBucket}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+  
+  #file generator API
+  #role for API
+  FilesGeneratorAPIRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "apigateway.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: ApiDirectWriteEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              Action:
+              - events:PutEvents
+              Effect: Allow
+              Resource:
+                - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+  #API definition
+  FilesGeneratorHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefinitionBody:
+        'Fn::Transform':
+          Name: 'AWS::Include'
+          Parameters:
+            Location: 'templates/api.yaml'
+  
+  #function that will generate files and put into S3
+  FilesGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/files_generator/
+      MemorySize: 256
+      Timeout: 900
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.api"],
+                "detail-type": ["file_generator_request"]
+              }
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref FileReceiverBucket
+      Environment:
+        Variables:
+          DESTINATION_BUCKET: !Ref FileReceiverBucket
+  
+  #receive file resources(performs file conversion)
+  FileReceiverBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        EventBridgeConfiguration: {}
+
+  OnFileReceiveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_receive/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["aws.s3"],
+                "detail-type": ["Object Created"],
+                "detail": {
+                  "bucket": {
+                  "name": ["${FileReceiverBucket}"]
+                  }
+                }
+              }
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref FileReceiverBucket
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+  
+  #In case of conversion errors(eg files with missing tags),
+  #we need to send the payload to a DLQ. Lambda will send an event to EB
+  #that will send the payload to SQS
+  OnFileconvertedErrorQueue:
+    Type: AWS::SQS::Queue
+
+  #rule to receive events from conversion lambda
+  OnFileConvertedErrorEBRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern: !Sub |
+        {
+          "source": ["NFProcessor.file_receiver"],
+          "detail-type": ["file-converted-error"]
+        }
+      Targets:
+        - Arn: !GetAtt OnFileconvertedErrorQueue.Arn
+          Id: "FileConvertedErrorQueue"
+  
+  # Allow EventBridge to invoke SQS
+  EventBridgeToToSqsPolicyRole:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: SQS:SendMessage
+          Resource:  !GetAtt OnFileconvertedErrorQueue.Arn
+      Queues:
+        - Ref: OnFileconvertedErrorQueue
+  
+  #file validation resources(performs business validation)
+  OnFileConvertedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_converted/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.file_receiver"],
+                "detail-type": ["file-converted"]
+              }
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+
+  #database persistence(final) step resources
+  FileStatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: filename
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: filename
+          KeyType: HASH
+
+  OnFileValidatedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/on_file_validated/
+      Events:
+        Trigger:
+          Type: EventBridgeRule
+          Properties:
+            Pattern: !Sub |
+              {
+                "source": ["NFProcessor.file_validator"],
+                "detail-type": ["file-validated"]
+              }
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FileStatusTable
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref FileStatusTable
+
+  #resources that cannot be created by sam will be handled by bellow stack
+  NonSamResources:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/non-sam-resources.yaml
+      Parameters:
+        CloudTrailBucketName: !Ref CloudTrailBucket
+
+Outputs:
+  CloudTrailBucket:
+    Description: "S3 bucket that will store the cloudtrail events for event bridge"
+    Value: !Ref CloudTrailBucket
+
+  FileReceiverBucket:
+    Description: S3 bucket containing all generated files
+    Value: !Ref FileReceiverBucket
+
+  FileGenerationCommandLinuxMacOS:
+    Description: "Command to generate the files for testing"
+    Value: !Sub | 
+      curl --location --request POST \
+      'https://${FilesGeneratorHttpApi}.execute-api.${AWS::Region}.amazonaws.com/filesgenerator' \
+      --header 'Content-Type: application/json' --data-raw '{"numberOfFiles": 100}'
+
+  FileGenerationCommandWindows:
+    Description: "Command to generate the files for testing"
+    Value: !Sub | 
+      $body = '{"numberOfFiles": 100}'
+      Invoke-RestMethod -uri 'https://${FilesGeneratorHttpApi}.execute-api.${AWS::Region}.amazonaws.com/filesgenerator' -method POST -body $body -ContentType "application/json"
