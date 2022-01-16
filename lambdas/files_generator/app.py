@@ -17,7 +17,13 @@ def handler(event, context):
         "event": event
     })
     bucket = os.getenv("DESTINATION_BUCKET")
-    numberOfFiles = event["detail"]['numberOfFiles'] if event["detail"]['numberOfFiles'] < _max_allowed_files else _max_allowed_files
+    numberOfFiles = event["detail"]['numberOfFiles']
+
+    if numberOfFiles > _max_allowed_files:
+        logger.warning({
+            "message": "User requested {} files, but API allows only {} at this point. Will proceed with {} requests".format(numberOfFiles, _max_allowed_files, _max_allowed_files)
+        })
+        numberOfFiles = _max_allowed_files
 
     logger.info({
         "message": "Starting to generate {} files on bucket{}".format(numberOfFiles, bucket)
