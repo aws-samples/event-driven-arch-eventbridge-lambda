@@ -206,7 +206,7 @@ Resources:
     Properties:
       CodeUri: lambdas/files_generator/
       MemorySize: 256
-      Timeout: 600
+      Timeout: 900
       Events:
         Trigger:
           Type: EventBridgeRule
@@ -227,7 +227,7 @@ Resources:
   #bucket cleaner(empties the bucketeiifccrcnhs prior to deletion)
   S3CleanerFunction:
     Type: AWS::Serverless::Function
-    Timeout: 600
+    Timeout: 900
     Properties:
       CodeUri: lambdas/custom_resource_s3cleaner/
       Policies:
@@ -239,7 +239,7 @@ Resources:
   S3CleanerCustomResource:
     Type: Custom::S3Cleaner
     Properties:
-      Timeout: 600
+      Timeout: 900
       ServiceToken: !GetAtt S3CleanerFunction.Arn
       FileReceiverBucketName: !Ref FileReceiverBucket
       EBTrailBucketName: !Ref CloudTrailBucket

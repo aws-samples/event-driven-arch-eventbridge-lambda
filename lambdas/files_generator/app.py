@@ -9,6 +9,7 @@ import json
 
 logger = Logger()
 s3 = boto3.resource('s3')
+_max_allowed_files=5000
 _incorrect_factor = 0.20
 
 def handler(event, context):
@@ -16,7 +17,7 @@ def handler(event, context):
         "event": event
     })
     bucket = os.getenv("DESTINATION_BUCKET")
-    numberOfFiles = event["detail"]['numberOfFiles']
+    numberOfFiles = event["detail"]['numberOfFiles'] if event["detail"]['numberOfFiles'] < _max_allowed_files else _max_allowed_files
 
     logger.info({
         "message": "Starting to generate {} files on bucket{}".format(numberOfFiles, bucket)
