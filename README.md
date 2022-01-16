@@ -3,6 +3,9 @@
 **[Feature request](https://github.com/aws-samples/event-driven-architecture-using-s3-event-notifications/issues/new)** | **[Detailed blog post](https://aws.amazon.com/blogs/<TBD>)**
 
 This sample application showcases how to set up an event-driven architecture for files processing using the following services:
+
+![Architecture and it's main components](images/architecture.png "High-level architecture")
+
 * [AWS Serverless Application Model(SAM)](https://aws.amazon.com/serverless/sam/)
 * [Amazon API Gateway](https://aws.amazon.com/api-gateway/)
 * [Amazon EventBridge](https://docs.aws.amazon.com/eventbridge/)
@@ -10,12 +13,6 @@ This sample application showcases how to set up an event-driven architecture for
 * [Amazon Simple Storage Service(S3)](https://aws.amazon.com/s3/)
 * [Amazon Simple Queue Service(SQS)](https://aws.amazon.com/sqs/)
 
-
-This example is composed by two applications:  
-* An application that runs on Amazon EC2 instance, simulating an external integration - [simulator](simulador/main.go). It is written in GoLang and optimized to run on EC2 with [Amazon Graviton Processors](https://aws.amazon.com/ec2/graviton/)
-* A [lambda function](integration-lambda/app.py) written in python, which will process the files received at a predefined lambda repository.
-
-All resources are deployed trought the [AWS Cloudformation](https://aws.amazon.com/cloudformation/) template located at [`template.yml`](template.yml).
 
 # Setup 
 
