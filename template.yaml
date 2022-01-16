@@ -256,6 +256,9 @@ Resources:
         CloudTrailBucketName: !Ref CloudTrailBucket
 
 Outputs:
-  FileGeneratorAPI:
-    Description: "Address to generate the files for testing"
-    Value: !Sub "https://${FilesGeneratorHttpApi}.execute-api.${AWS::Region}.amazonaws.com/filesgenerator?numberOfFiles=100"
+  FileGenerationCommand:
+    Description: "Command to generate the files for testing"
+    Value: !Sub | 
+      curl --location --request POST \
+      'https://${FilesGeneratorHttpApi}.execute-api.${AWS::Region}.amazonaws.com/filesgenerator' \
+      --header 'Content-Type: application/json' --data-raw '{"numberOfFiles": 100}'
