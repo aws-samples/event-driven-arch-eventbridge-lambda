@@ -51,6 +51,7 @@ Resources:
             Condition:
               StringEquals:
                 's3:x-amz-acl': 'bucket-owner-full-control'
+  
   #receive file resources
   FileReceiverBucket:
     Type: AWS::S3::Bucket
@@ -85,6 +86,7 @@ Resources:
               Action:
                 - events:PutEvents
               Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+  
   #file validation resources
   OnFileConvertedFunction:
     Type: AWS::Serverless::Function
@@ -222,30 +224,6 @@ Resources:
       Environment:
         Variables:
           DESTINATION_BUCKET: !Ref FileReceiverBucket
-
-  #Custom resource
-  #bucket cleaner(empties the bucketeiifccrcnhs prior to deletion)
-  S3CleanerFunction:
-    Type: AWS::Serverless::Function
-    Timeout: 900
-    Properties:
-      CodeUri: lambdas/custom_resource_s3cleaner/
-      Policies:
-        - S3FullAccessPolicy:
-            BucketName: !Ref FileReceiverBucket
-        - S3FullAccessPolicy:
-            BucketName: !Ref CloudTrailBucket
-  
-  S3CleanerCustomResource:
-    Type: Custom::S3Cleaner
-    Properties:
-      Timeout: 900
-      ServiceToken: !GetAtt S3CleanerFunction.Arn
-      FileReceiverBucketName: !Ref FileReceiverBucket
-      EBTrailBucketName: !Ref CloudTrailBucket
-    DependsOn:
-      - FileReceiverBucket
-      - CloudTrailBucket
 
   #resources that cannot be created by sam will be handled by bellow stack
   NonSamResources:
