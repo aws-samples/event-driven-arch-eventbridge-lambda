@@ -35,7 +35,8 @@ def convertFromXmlToJson(bucket, key):
             "file": key,
             }, 
             exc_info=True)
-        #in case of errors, we send the content a little bit more strucuted in order to help on further steps
+        # in case of errors, we send the content a little bit more strucuted 
+        # in order to help on further steps
         payload = json.dumps({
             "filename": key,
             "exception": str(e),
