@@ -28,6 +28,9 @@ def validateContent(filename, payload):
     })
 
     if len(payload["nf"]["infLeitura"]["placa"]) != 7:
+        logger.info({
+            "message": "Field placa is invalid"
+        })
         return "PLACA_INVALIDA"
     return None
 
