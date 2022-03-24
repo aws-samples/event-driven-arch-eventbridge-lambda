@@ -1,6 +1,6 @@
 ## Serverless event-driven architecture
 
-**[Feature request](https://github.com/aws-samples/event-driven-architecture-using-s3-event-notifications/issues/new)** | **[Detailed blog post](https://aws.amazon.com/blogs/<TBD>)**
+**[Feature request](https://github.com/aws-samples/event-driven-architecture-using-s3-event-notifications/issues/new)** | **Detailed blog posts - [PT-BR](https://aws.amazon.com/pt/blogs/aws-brasil/criando-uma-arquitetura-baseada-em-eventos-utilizando-amazon-eventbridge-e-amazon-lambda/)**
 
 This sample application showcases how to set up an event-driven architecture for files processing using the following services:
 
