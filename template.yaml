@@ -150,6 +150,8 @@ Resources:
   #that will send the payload to SQS
   OnFileconvertedErrorQueue:
     Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: true
 
   #rule to receive events from conversion lambda
   OnFileConvertedErrorEBRule:
