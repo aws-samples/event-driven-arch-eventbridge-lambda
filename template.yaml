@@ -244,6 +244,125 @@ Resources:
       TemplateURL: templates/non-sam-resources.yaml
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucket
+        
+  #CW Dashboard
+  CWDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: "Processed files - resources"
+      DashboardBody: '{
+        "widgets": [
+            {
+                "height": 15,
+                "width": 24,
+                "y": 0,
+                "x": 0,
+                "type": "Lambda Functions",
+                "properties": {
+                    "metrics": [
+                        {
+                            "metricName": "Invocations",
+                            "resourceType": "AWS::Lambda::Function",
+                            "stat": "Sum"
+                        },
+                        {
+                            "metricName": "Duration",
+                            "resourceType": "AWS::Lambda::Function",
+                            "stat": "Average"
+                        },
+                        {
+                            "metricName": "Errors",
+                            "resourceType": "AWS::Lambda::Function",
+                            "stat": "Sum"
+                        },
+                        {
+                            "metricName": "Throttles",
+                            "resourceType": "AWS::Lambda::Function",
+                            "stat": "Sum"
+                        }
+                    ],
+                    "labels": [
+                        {
+                            "key": "FunctionName"
+                        }
+                    ],
+                    "widgetOptions": {
+                        "legend": {
+                            "position": "right"
+                        },
+                        "view": "timeSeries",
+                        "stacked": false,
+                        "rowsPerPage": 50,
+                        "widgetsPerRow": 2
+                    },
+                    "period": 60,
+                    "splitBy": "",
+                    "region": "sa-east-1",
+                    "title": "Lambdas"
+                }
+            },
+            {
+                "type": "explorer",
+                "x": 0,
+                "y": 15,
+                "width": 24,
+                "height": 15,
+                "properties": {
+                    "metrics": [
+                        {
+                            "metricName": "ConditionalCheckFailedRequests",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Sum"
+                        },
+                        {
+                            "metricName": "TimeToLiveDeletedItemCount",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Sum"
+                        },
+                        {
+                            "metricName": "TransactionConflict",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Average"
+                        },
+                        {
+                            "metricName": "OnlineIndexConsumedWriteCapacity",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Sum"
+                        },
+                        {
+                            "metricName": "OnlineIndexPercentageProgress",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Average"
+                        },
+                        {
+                            "metricName": "OnlineIndexThrottleEvents",
+                            "resourceType": "AWS::DynamoDB::Table",
+                            "stat": "Sum"
+                        }
+                    ],
+                    "labels": [
+                        {
+                            "key": "project",
+                            "value": "InitiateSPDemo"
+                        }
+                    ],
+                    "widgetOptions": {
+                        "legend": {
+                            "position": "bottom"
+                        },
+                        "view": "timeSeries",
+                        "stacked": false,
+                        "rowsPerPage": 50,
+                        "widgetsPerRow": 2
+                    },
+                    "period": 60,
+                    "splitBy": "",
+                    "region": "sa-east-1",
+                    "title": "DynamoDB Resources"
+                }
+            }
+        ]
+    }'
 
 Outputs:
   CloudTrailBucket:
