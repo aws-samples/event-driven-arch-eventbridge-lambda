@@ -8,7 +8,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Runtime: python3.9
+    Runtime: python3.7
     Handler: app.handler
     Timeout: 3
     Tracing: Active
@@ -213,6 +213,9 @@ Resources:
       KeySchema:
         - AttributeName: filename
           KeyType: HASH
+      Tags: 
+        - Key: "project"
+          Value: "InitiateSPDemo"
 
   OnFileValidatedFunction:
     Type: AWS::Serverless::Function
