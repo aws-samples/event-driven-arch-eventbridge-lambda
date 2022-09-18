@@ -215,7 +215,7 @@ Resources:
           KeyType: HASH
       Tags: 
         - Key: "project"
-          Value: "InitiateSPDemo"
+          Value: "EventDrivenFileProcessing"
 
   OnFileValidatedFunction:
     Type: AWS::Serverless::Function
@@ -249,7 +249,7 @@ Resources:
   CWDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: "Processed files - resources"
+      DashboardName: "Processedfiles_resources"
       DashboardBody: '{
         "widgets": [
             {
@@ -257,7 +257,7 @@ Resources:
                 "width": 24,
                 "y": 0,
                 "x": 0,
-                "type": "Lambda Functions",
+                "type": "explorer",
                 "properties": {
                     "metrics": [
                         {
@@ -343,7 +343,7 @@ Resources:
                     "labels": [
                         {
                             "key": "project",
-                            "value": "InitiateSPDemo"
+                            "value": "EventDrivenFileProcessing"
                         }
                     ],
                     "widgetOptions": {
