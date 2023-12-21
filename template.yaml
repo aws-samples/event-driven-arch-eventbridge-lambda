@@ -115,7 +115,8 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       NotificationConfiguration:
-        EventBridgeConfiguration: {}
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
 
   OnFileReceiveFunction:
     Type: AWS::Serverless::Function
