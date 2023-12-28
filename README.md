@@ -16,6 +16,15 @@ This sample application showcases how to set up an event-driven architecture for
 
 # Setup 
 
+## Requirements
+
+* [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) configured
+* [AWS CLI](https://aws.amazon.com/cli/) configured
+* [Docker](https://docs.docker.com/get-docker/) installed and running.
+* (if on Microsoft Windows) [Windows Powershell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.2) installed and running
+
+## Deploy
+
 The main template [template.yaml](template.yaml) is used to set up all resources using AWS SAM cli.
 
 To build the stack, issue the following command. 
@@ -105,12 +114,6 @@ To remove all the created resources, perform the following actions on [AWS Conso
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
-## Requirements
-
-* [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) configured
-* [AWS CLI](https://aws.amazon.com/cli/) configured
-* Docker(https://www.docker.com) installed and running
-* (if on Microsoft Windows) [Windows Powershell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.2) installed and running
 
 ## License
 
